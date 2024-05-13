@@ -1,22 +1,27 @@
-[project]
-name = "gconv_TPK"
+
+[tool.poetry]
+name = "gconv-tpk"
 version = "0.0.3"
-authors = [
-  { name="Thijs Kuipers", email="kuipersthijs@gmail.com" },
-]
 description = "Pytorch extension for continuous regular group convolutions"
+authors = ["Thijs Kuipers <kuipersthijs@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "torch",
-    "tqdm",
-]
+packages = [ {include = "gconv"} ] 
 
-[project.urls]
+[tool.poetry.urls]
 "Homepage" = "https://github.com/ThijsKuipers1995/gconv"
 "Bug Tracker" = "https://github.com/ThijsKuipers1995/gconv/issues"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.3.0"
+tqdm = "^4.66.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
