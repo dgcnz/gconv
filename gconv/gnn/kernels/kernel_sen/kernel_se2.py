@@ -42,7 +42,7 @@ class GLiftingKernelSE2(GLiftingKernel):
 
         grid_Rn = gF.create_grid_R2(kernel_size)
 
-        mask = gF.create_spherical_mask_R2(kernel_size)
+        mask = gF.create_spherical_mask_R2(kernel_size) if mask else None
 
         sample_Rn_kwargs = {
             "mode": sampling_mode,
