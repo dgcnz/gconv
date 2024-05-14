@@ -4,6 +4,7 @@ kernel.py
 Contains base classes for group kernel, separable group kernel, and
 lifting kernels.
 """
+
 from __future__ import annotations
 
 from typing import Callable, Optional
@@ -38,8 +39,7 @@ class GroupKernel(nn.Module):
         "sample_Rn_kwargs",
     ]
 
-    def reset_parameters(self) -> None:
-        ...
+    def reset_parameters(self) -> None: ...
 
     def __init__(
         self,
@@ -184,6 +184,102 @@ class GLiftingKernel(GroupKernel):
             **self.sample_Rn_kwargs,
         ).view(
             self.out_channels, num_H, self.in_channels // self.groups, *self.kernel_size
+        )
+
+        if self.mask is not None:
+            weight = self.mask * weight
+
+        if self.det_H is not None:
+            weight = weight / self.det_H(H).view(-1, 1, *self.weight_dims)
+
+        return weight
+
+
+class RGLiftingKernel(GroupKernel):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        num_filter_banks: int,
+        kernel_size,
+        group_kernel_size: tuple,
+        grid_H,
+        grid_Rn,
+        groups: int = 1,
+        mask: Tensor | None = None,
+        det_H: Callable | None = None,
+        inverse_H: Callable | None = None,
+        left_apply_to_Rn: Callable | None = None,
+        sample_Rn: Callable | None = None,
+        sample_Rn_kwargs: dict = {},
+    ) -> None:
+        """
+        The lifting kernel manages the group and weights for
+        lifting an Rn input to Rn x H input.
+        """
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            group_kernel_size,
+            groups=groups,
+            grid_H=grid_H,
+            grid_Rn=grid_Rn,
+            mask=mask,
+            det_H=det_H,
+            inverse_H=inverse_H,
+            left_apply_to_Rn=left_apply_to_Rn,
+            sample_Rn=sample_Rn,
+            sample_Rn_kwargs=sample_Rn_kwargs,
+        )
+
+        self.weight = torch.nn.Parameter(
+            torch.empty(
+                num_filter_banks, out_channels, in_channels // groups, *self.kernel_size
+            )
+        )
+        if len(group_kernel_size) != 1:
+            raise NotImplementedError(
+                "Relaxed Group Convolutions only support group kernels of size 1"
+            )
+
+        self.num_filter_banks = num_filter_banks
+        self.relaxed_weights = torch.nn.Parameter(
+            torch.ones(num_filter_banks, group_kernel_size[0])
+        )
+
+        # for expanding determinant to correct size
+        self.weight_dims = (1,) * (self.weight.ndim - 2)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        init.kaiming_normal_(self.weight, a=math.sqrt(5))
+
+    def forward(self, H) -> Tensor:
+        num_H = H.shape[0]
+
+        H_product = self.left_apply_to_Rn(self.inverse_H(H), self.grid_Rn)
+
+        product_dims = (1,) * (H_product.ndim - 1)
+
+        weight = self.sample_Rn(
+            self.weight.flatten(0, 1).repeat_interleave(H.shape[0], dim=0),
+            H_product.repeat(self.num_filter_banks * self.out_channels, *product_dims),
+            **self.sample_Rn_kwargs,
+        ).view(
+            self.num_filter_banks,
+            self.out_channels,
+            num_H,
+            self.in_channels // self.groups,
+            *self.kernel_size,
+        )
+        weight = torch.sum(
+            self.relaxed_weights.view(
+                self.num_filter_banks, 1, self.relaxed_weights.shape[1], 1, 1, 1
+            )
+            * weight,
+            dim=0,
         )
 
         if self.mask is not None:

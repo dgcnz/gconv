@@ -1,4 +1,4 @@
-from gconv.gnn.kernels import GLiftingKernel, GSeparableKernel, GKernel
+from gconv.gnn.kernels import GLiftingKernel, GSeparableKernel, GKernel, RGLiftingKernel
 from gconv.geometry import so2
 
 import gconv.gnn.functional as gF
@@ -52,6 +52,60 @@ class GLiftingKernelSE2(GLiftingKernel):
         super().__init__(
             in_channels,
             out_channels,
+            (kernel_size, kernel_size),
+            (grid_H.shape[0],),
+            grid_H,
+            grid_Rn,
+            groups,
+            mask=mask,
+            inverse_H=so2.inverse_angle,
+            left_apply_to_Rn=so2.left_apply_angle_to_R2,
+            sample_Rn=gF.grid_sample,
+            sample_Rn_kwargs=sample_Rn_kwargs,
+        )
+
+class RGLiftingKernelSE2(RGLiftingKernel):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        num_filter_banks: int,
+        kernel_size: int,
+        group_kernel_size: int = 8,
+        groups: int = 1,
+        sampling_mode: str = "bilinear",
+        sampling_padding_mode: str = "border",
+        mask: bool = True,
+        grid_H: Tensor | None = None,
+    ) -> None:
+        """
+        :param in_channels: int denoting the number of input channels.
+        :param out_channels: int denoting the number of output channels.
+        :param num_filter_banks: int denoting the number of filter banks.
+        :param kernel_size: int denoting the spatial kernel size.
+        :param group_kernel_size: int denoting the group kernel size.
+        :param groups: number of groups for depth-wise separability.
+        :param sampling_mode: str indicating the sampling mode. Supports bilinear (default) or nearest.
+        :param sampling_padding_mode: str indicating padding mode for sampling. Default border.
+        :param mask: bool if true, will initialize spherical mask.
+        :param grid_H: tensor of reference grid used for interpolation. If not provided, a uniform grid of group_kernel_size will be generated. If provided, will overwrite given group_kernel_size.
+        """
+        if grid_H is None:
+            grid_H = so2.uniform_grid(group_kernel_size)
+
+        grid_Rn = gF.create_grid_R2(kernel_size)
+
+        mask = gF.create_spherical_mask_R2(kernel_size) if mask else None
+
+        sample_Rn_kwargs = {
+            "mode": sampling_mode,
+            "padding_mode": sampling_padding_mode,
+        }
+        
+        super().__init__(
+            in_channels,
+            out_channels,
+            num_filter_banks,
             (kernel_size, kernel_size),
             (grid_H.shape[0],),
             grid_H,
