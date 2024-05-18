@@ -3,6 +3,7 @@ gconv.py
 
 Implements group convolution base modules.
 """
+
 from __future__ import annotations
 
 from matplotlib import pyplot as plt
@@ -155,7 +156,9 @@ class GroupConvNd(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def _conv2d_forward(self, input: Tensor, weight: Tensor, groups: int):
+    def _conv2d_forward(
+        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None
+    ):
         if self.padding_mode != "zeros":
             return F.conv2d(
                 F.pad(
@@ -168,11 +171,15 @@ class GroupConvNd(nn.Module):
                 self.dilation,
                 groups,
             )
+        if padding is None:
+            padding = self.padding
         return F.conv2d(
-            input, weight, None, self.stride, self.padding, self.dilation, groups
+            input, weight, None, self.stride, padding, self.dilation, groups
         )
 
-    def _conv3d_forward(self, input: Tensor, weight: Tensor, groups: int):
+    def _conv3d_forward(
+        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None
+    ):
         if self.padding_mode != "zeros":
             return F.conv3d(
                 F.pad(
@@ -185,8 +192,10 @@ class GroupConvNd(nn.Module):
                 self.dilation,
                 groups,
             )
+        if padding is None:
+            padding = self.padding
         return F.conv3d(
-            input, weight, None, self.stride, self.padding, self.dilation, groups
+            input, weight, None, self.stride, padding, self.dilation, groups
         )
 
     def extra_repr(self):
@@ -296,7 +305,7 @@ class GSeparableConvNd(GroupConvNd):
         num_in_H, num_out_H = in_H.shape[0], out_H.shape[0]
 
         weight_H, weight = self.kernel(in_H, out_H)
-
+        assert weight_H.shape[4:] == (1, 1, 1), "Pointwise kernel must have size 1."
         # subgroup conv
         input = self._conv_forward(
             input.reshape(N, self.in_channels * num_in_H, *input_dims),
@@ -306,6 +315,7 @@ class GSeparableConvNd(GroupConvNd):
                 *weight_H.shape[4:],
             ),
             self.groups,
+            padding=0,  # no padding for pointwise conv
         )
 
         # spatial conv
