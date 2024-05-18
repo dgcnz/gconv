@@ -113,25 +113,25 @@ class RGLiftingConvSE2(GLiftingConv2d):
         Implements SE2 lifting convolution.
 
         Arguments:
-            - int_channels: int denoting the number of input channels.
-            - out_channels: int denoting the number of output channels.
-            - kernel_size: tuple denoting the spatial kernel size.
-            - num_filter_banks: int denoting the number of filter banks.
-            - groups: int denoting the number of groups for depth-wise separability.
-            - stride: int denoting the stride.
-            - padding: int or denoting padding.
-            - dilation: int denoting dilation.
-            - group_kernel_size: int denoting the group kernel size (default 4).
-            - grid_H: tensor of shape (N, 3, 3) of so2 elements (rotation matrices). If
-                      not provided, a uniform grid will be initalizd of size group_kernel_size.
-                      If provided, group_kernel_size will be set to N.
-            - padding_mode: str denoting the padding mode.
-            - permute_output_grid: bool that if true will randomly permute output group grid
-                                   for estimating continuous groups.
-            - sampling_mode: mode used for sampling weights. Supports bilinear (default) or nearest.
-            - sampling_padding_mode: padding mode for weight sampling, border (default) is recommended.
-            - bias: bool that if true, will initialzie bias parameters.
-            - mask: bool that if true, will initialize spherical mask applied to spatial weights.
+        :param int_channels: int denoting the number of input channels.
+        :param out_channels: int denoting the number of output channels.
+        :param kernel_size: tuple denoting the spatial kernel size.
+        :param num_filter_banks: int denoting the number of filter banks.
+        :param groups: int denoting the number of groups for depth-wise separability.
+        :param stride: int denoting the stride.
+        :param padding: int or denoting padding.
+        :param dilation: int denoting dilation.
+        :param group_kernel_size: int denoting the group kernel size (default 4).
+        :param grid_H: tensor of shape (N, 3, 3) of so2 elements (rotation matrices). If
+                not provided, a uniform grid will be initalizd of size group_kernel_size.
+                If provided, group_kernel_size will be set to N.
+        :param padding_mode: str denoting the padding mode.
+        :param permute_output_grid: bool that if true will randomly permute output group grid
+                             for estimating continuous groups.
+        :param sampling_mode: mode used for sampling weights. Supports bilinear (default) or nearest.
+        :param sampling_padding_mode: padding mode for weight sampling, border (default) is recommended.
+        :param bias: bool that if true, will initialzie bias parameters.
+        :param mask: bool that if true, will initialize spherical mask applied to spatial weights.
         """
         kernel = RGLiftingKernelSE2(
             in_channels,

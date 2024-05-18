@@ -81,7 +81,7 @@ class RGLiftingKernelSE2(RGLiftingKernel):
         """
         :param in_channels: int denoting the number of input channels.
         :param out_channels: int denoting the number of output channels.
-        :param num_filter_banks: int denoting the number of filter banks.
+        :param num_filter_banks: int denoting the number of filter banks for relaxed equivariance.
         :param kernel_size: int denoting the spatial kernel size.
         :param group_kernel_size: int denoting the group kernel size.
         :param groups: number of groups for depth-wise separability.

@@ -276,7 +276,7 @@ class RGLiftingKernel(GroupKernel):
         )
         weight = torch.sum(
             self.relaxed_weights.view(
-                self.num_filter_banks, 1, self.relaxed_weights.shape[1], 1, 1, 1
+                self.num_filter_banks, 1, self.relaxed_weights.shape[1], *product_dims,
             )
             * weight,
             dim=0,

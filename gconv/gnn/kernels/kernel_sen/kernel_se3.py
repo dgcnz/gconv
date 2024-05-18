@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from gconv.gnn.kernels import GKernel, GSeparableKernel, GLiftingKernel
+from gconv.gnn.kernels import GKernel, GSeparableKernel, GLiftingKernel, RGLiftingKernel
 
 from torch import Tensor
 
@@ -62,6 +62,64 @@ class GLiftingKernelSE3(GLiftingKernel):
         super().__init__(
             in_channels,
             out_channels,
+            (kernel_size, kernel_size, kernel_size),
+            (grid_H.shape[0],),
+            grid_H,
+            grid_Rn,
+            groups,
+            mask=mask,
+            inverse_H=so3.matrix_inverse,
+            left_apply_to_Rn=so3.left_apply_to_R3,
+            sample_Rn=gF.grid_sample,
+            sample_Rn_kwargs=sample_Rn_kwargs,
+        )
+
+class RGLiftingKernelSE3(RGLiftingKernel):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        num_filter_banks: int,
+        kernel_size: int,
+        group_kernel_size: int = 4,
+        groups: int = 1,
+        sampling_mode: str = "bilinear",
+        sampling_padding_mode: str = "border",
+        mask: bool = True,
+        grid_H: Optional[Tensor] = None,
+    ):
+        """
+        Implements SE3 relaxed lifting kernel.
+
+        :param in_channels: int denoting the number of input channels.
+        :param out_channels: int denoting the number of output channels.
+        :param kernel_size: int denoting the spatial kernel size.
+        :param num_filter_banks: int denoting the number of filter banks for relaxed equivariance.
+        :param group_kernel_size: int denoting the group kernel size.
+        :param groups: number of groups for depth-wise separability.
+        :param sampling_mode: str indicating the sampling mode. Supports bilinear (default) or nearest.
+        :param sampling_padding_mode: str indicating padding mode for sampling. Default border.
+        :param mask: bool if true, will initialize spherical mask.
+        :param grid_H: tensor of reference grid used for interpolation. If not
+                    provided, a uniform grid of group_kernel_size will be
+                    generated. If provided, will overwrite given group_kernel_size.
+        """
+        if grid_H is None:
+            grid_H = so3.uniform_grid(group_kernel_size, "matrix")
+
+        grid_Rn = gF.create_grid_R3(kernel_size)
+
+        mask = gF.create_spherical_mask_R3(kernel_size) if mask else None
+
+        sample_Rn_kwargs = {
+            "mode": sampling_mode,
+            "padding_mode": sampling_padding_mode,
+        }
+
+        super().__init__(
+            in_channels,
+            out_channels,
+            num_filter_banks,
             (kernel_size, kernel_size, kernel_size),
             (grid_H.shape[0],),
             grid_H,
