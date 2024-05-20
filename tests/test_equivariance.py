@@ -1,8 +1,3 @@
-import sys
-
-sys.path.append("..")
-
-
 from gconv.gnn import GLiftingConvSE3
 from gconv.geometry.groups import so3 as R
 from gconv.gnn import functional as gF

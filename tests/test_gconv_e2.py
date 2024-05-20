@@ -1,12 +1,7 @@
-import sys
-
-sys.path.append("..")
-
-
 import torch
 
-from gconv.gnn import GLiftingConvE3, GSeparableConvE3, GConvE3
-from gconv.geometry.groups import o3
+from gconv.gnn import GLiftingConvE2, GSeparableConvE2, GConvE2
+from gconv.geometry.groups import o2
 
 
 import warnings
@@ -23,10 +18,10 @@ def test_lifting_gconv():
     groups = 1
     bias = True
 
-    input = torch.rand(batch_size, in_channels, 28, 28, 28)
-    grid_H = o3.uniform_grid((4, 4))
+    input = torch.rand(batch_size, in_channels, 28, 28)
+    grid_H = o2.uniform_grid((4, 4))
 
-    model = GLiftingConvE3(
+    model = GLiftingConvE2(
         in_channels,
         out_channels,
         kernel_size,
@@ -38,9 +33,9 @@ def test_lifting_gconv():
 
     output, out_H = model(input)
 
-    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28, 28)
+    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28)
 
-    model = GLiftingConvE3(
+    model = GLiftingConvE2(
         in_channels,
         out_channels,
         kernel_size,
@@ -68,10 +63,10 @@ def test_separable_gconv():
     groups = 1
     bias = True
 
-    input = torch.rand(batch_size, in_channels, group_kernel_size, 28, 28, 28)
-    grid_H = o3.uniform_grid((4, 4))
+    input = torch.rand(batch_size, in_channels, group_kernel_size, 28, 28)
+    grid_H = o2.uniform_grid((4, 4))
 
-    model = GSeparableConvE3(
+    model = GSeparableConvE2(
         in_channels,
         out_channels,
         kernel_size,
@@ -83,9 +78,9 @@ def test_separable_gconv():
 
     output, out_H = model(input, grid_H)
 
-    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28, 28)
+    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28)
 
-    model = GSeparableConvE3(
+    model = GSeparableConvE2(
         in_channels,
         out_channels,
         kernel_size,
@@ -111,10 +106,10 @@ def test_gconv():
     groups = 1
     bias = True
 
-    input = torch.rand(batch_size, in_channels, group_kernel_size, 28, 28, 28)
-    grid_H = o3.uniform_grid((4, 4))
+    input = torch.rand(batch_size, in_channels, group_kernel_size, 28, 28)
+    grid_H = o2.uniform_grid((4, 4))
 
-    model = GConvE3(
+    model = GConvE2(
         in_channels,
         out_channels,
         kernel_size,
@@ -126,9 +121,9 @@ def test_gconv():
 
     output, out_H = model(input, grid_H)
 
-    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28, 28)
+    assert output.shape == (batch_size, out_channels, group_kernel_size, 28, 28)
 
-    model = GConvE3(
+    model = GConvE2(
         in_channels,
         out_channels,
         kernel_size,

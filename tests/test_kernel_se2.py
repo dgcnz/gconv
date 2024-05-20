@@ -1,8 +1,4 @@
-import sys
-
-sys.path.append("..")
-
-from gconv.nn import kernels
+from gconv.gnn import kernels
 from gconv.geometry.groups import so2
 
 

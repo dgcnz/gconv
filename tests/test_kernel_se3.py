@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append("..")
-
 from gconv.gnn import kernels
 from gconv.geometry.groups import so3
 

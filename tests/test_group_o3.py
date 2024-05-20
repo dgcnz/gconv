@@ -1,11 +1,7 @@
-import sys
-
-sys.path.append("..")
-
 import torch
 from gconv.geometry.groups import o3
 
-import gconv.nn.functional as gF
+import gconv.gnn.functional as gF
 
 
 def test_uniform_grid():

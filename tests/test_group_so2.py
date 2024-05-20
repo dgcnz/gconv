@@ -1,12 +1,8 @@
-import sys
-
-sys.path.append("..")
-
 import math
 import torch
 
 from gconv.geometry import so2
-from gconv.nn.functional import create_grid_R2
+from gconv.gnn.functional import create_grid_R2
 
 
 def test_uniform_grid():

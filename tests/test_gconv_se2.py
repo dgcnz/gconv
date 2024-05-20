@@ -1,10 +1,6 @@
-import sys
-
-sys.path.append("..")
-
 import torch
 
-from gconv.nn import GLiftingConvSE2, GSeparableConvSE2, GConvSE2
+from gconv.gnn import GLiftingConvSE2, GSeparableConvSE2, GConvSE2
 from gconv.geometry.groups import so2
 
 
