@@ -305,7 +305,7 @@ class GSeparableConvNd(GroupConvNd):
         num_in_H, num_out_H = in_H.shape[0], out_H.shape[0]
 
         weight_H, weight = self.kernel(in_H, out_H)
-        assert weight_H.shape[4:] == (1, 1, 1), "Pointwise kernel must have size 1."
+        assert weight_H.shape[4:] == len(self.kernel_size) * (1, ), f"Pointwise kernel must have size 1. vs {weight_H.shape[4:]}"
         # subgroup conv
         input = self._conv_forward(
             input.reshape(N, self.in_channels * num_in_H, *input_dims),
