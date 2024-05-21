@@ -193,6 +193,8 @@ class GSeparableConvSE3(GSeparableConv3d):
         mask: bool = True,
         bias: bool = False,
         grid_H: Optional[Tensor] = None,
+        conv_mode='3d', #ADDED FOR UPCONV
+        output_padding = 0, #ADDED FOR UPCONV
     ) -> None:
         """
         Implements SE3 separable group convolution.
@@ -252,6 +254,8 @@ class GSeparableConvSE3(GSeparableConv3d):
             dilation,
             padding_mode,
             bias,
+            conv_mode=conv_mode, #ADDED FOR UPCONV
+            output_padding=output_padding   #ADDED FOR UPCONV
         )
 
     def forward(
@@ -290,6 +294,8 @@ class RGSeparableConvSE3(GSeparableConv3d):
         mask: bool = True,
         bias: bool = False,
         grid_H: Optional[Tensor] = None,
+        conv_mode = '3d', #ADDED FOR UPCONV
+        output_padding=0 #ADDED FOR UPCONV
     ) -> None:
         """
         :param int_channels: int denoting the number of input channels.
@@ -348,6 +354,8 @@ class RGSeparableConvSE3(GSeparableConv3d):
             dilation,
             padding_mode,
             bias,
+            conv_mode=conv_mode, #ADDED FOR UPCONV
+            output_padding=output_padding #ADDED FOR UPCONV
         )
 
     def forward(

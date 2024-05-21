@@ -54,6 +54,7 @@ class GroupConvNd(nn.Module):
         padding_mode: str = "zeros",  # NOTE: I like it this way
         conv_mode: str = "3d",
         bias: bool = False,
+        output_padding = 0 # ADDED FOR UPCONV
     ) -> None:
         super().__init__()
         if isinstance(group_kernel_size, tuple) and (
@@ -99,6 +100,7 @@ class GroupConvNd(nn.Module):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
+        self.output_padding = output_padding #ADDED FOR UPCONV
 
         self.padding_mode = padding_mode
 
@@ -112,10 +114,19 @@ class GroupConvNd(nn.Module):
             self.padding = (
                 _triple(padding) if isinstance(self.padding, int) else padding
             )
+        #ADDED FOR UPCONV
+        elif conv_mode == "3d_transposed": 
+            if self.padding_mode != "zeros":
+                raise ValueError("padding_mode must be zeros for transposed convolution")
+            self._conv_forward = self._conv3d_transposed_forward
+            bias_shape = (1, 1, 1, 1)
+            self.padding = (
+                _triple(padding) if isinstance(self.padding, int) else padding
+            )
 
         else:
             raise ValueError(
-                f"Unspported conv mode: got {conv_mode=}, expected `2d` or `3d`."
+                f"Unspported conv mode: got {conv_mode=}, expected `2d`, `3d` or 3d_transposed." #ADDED FOR UPCONV
             )
 
         # init padding settings
@@ -196,6 +207,26 @@ class GroupConvNd(nn.Module):
             padding = self.padding
         return F.conv3d(
             input, weight, None, self.stride, padding, self.dilation, groups
+        )
+    
+    #ADDED FOR UPCONV
+    def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int):
+        #Performs a transposed conv3d, commonly used to upsample
+
+        if self.padding_mode != "zeros":
+            raise ValueError("padding_mode must be zero for transposed conv")
+        weight_new = weight.transpose(0,1)
+        return F.conv_transpose3d(
+            F.pad(
+                input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+            ),
+            weight_new,
+            None,
+            self.stride,        #Stride or dilation needs to be higher than output padding
+            _triple(0),
+            self.dilation,
+            groups,
+            self.output_padding           #output padding should be one to go from 16^3 to 32^3 to 64^3
         )
 
     def extra_repr(self):
@@ -616,6 +647,8 @@ class GSeparableConv3d(GSeparableConvNd):
         dilation: int = 1,
         padding_mode: str = "zeros",
         bias: bool = False,
+        conv_mode = '3d',   #ADDED FOR UPCONV
+        output_padding = 0, #ADDED FOR UPCONV
     ) -> None:
         """
         Implements 3d separable group convolution.
@@ -649,8 +682,9 @@ class GSeparableConv3d(GSeparableConvNd):
             padding,
             _triple(dilation),
             padding_mode,
-            conv_mode="3d",
             bias=bias,
+            conv_mode=conv_mode, #ADDED FOR UPCONV            
+            output_padding=output_padding  #ADDED FOR UPCONV
         )
 
 
