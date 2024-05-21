@@ -1,13 +1,16 @@
-# Continuous Regular Group Convolutions (WIP 👷‍♀️👷‍♂️)
+# Regular Group Convolutions
 
-This package implements a Pytorch framework for group convolutions that are easy to use and implement in existing Pytorch modules. The package offers premade modules for E3 and SE3 convolutions, as well as basic operations such as pooling and normalization for $\mathbb{R}^n \rtimes H$ input. The method is explained in the paper [Regular SE(3) Group Convolutions for Volumetric Medical Image Analysis](https://arxiv.org/abs/2306.13960), accepted at MICCAI 2023 (see reference below).
+This package extends [https://github.com/ThijsKuipers1995/gconv](Thijs Kuipers' gconv) to add support for Approximate/Relaxed Group Equivariant kernels as described in [Wang et al. 2022](https://arxiv.org/abs/2201.11969) and [Wang et al. 2023](https://openreview.net/forum?id=B8EpSHEp9j)
 
-## Installation from Source
+## Installation
 
-Download `gconv` and save to a directory. Then from that directory run the following command:
-
+With pip:
+```sh
+pip install git+https://github.com/dgcnz/gconv.git
 ```
-pip install -e gconv
+With poetry:
+```sh
+poetry add git+https://github.com/dgcnz/gconv.git
 ```
 
 ## Getting Started
@@ -34,23 +37,3 @@ y = pool(x3, H2)                                                                
 In line 5, a random batch of three-channel $\mathbb{R}^3$ volumes is created. In line 6, the $\mathbb{R}^3$ is lifted to $\text{SE}(3) = \mathbb{R}^3 \rtimes \text{SO}(3)$.  In line 7, an $\text{SE}(3)$ convolution is performed. In line 14, a global pooling is performed, resulting in $\text{SE}(3)$ invariant features.
 
 Furthermore, `gconv` offers all the necessary tools to build fully custom group convolutions. All that is required is implementing 5 (or less, depending on the type of convolution) group ops! For more details on how to implement custom group convolutions, see `gconv_tutorial.ipynb`.
-
-## Requirements:
-```
-python >= 3.10
-torch
-tqdm
-```
-
-## Reference:
-Paper accepted at MICCAI 2023.
-```
-@misc{kuipers2023regular,
-      title={Regular SE(3) Group Convolutions for Volumetric Medical Image Analysis}, 
-      author={Thijs P. Kuipers and Erik J. Bekkers},
-      year={2023},
-      eprint={2306.13960},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
-}
-```
