@@ -1,6 +1,6 @@
 # Regular Group Convolutions
 
-This package extends [https://github.com/ThijsKuipers1995/gconv](Thijs Kuipers' gconv) to add support for Approximate/Relaxed Group Equivariant kernels as described in [Wang et al. 2022](https://arxiv.org/abs/2201.11969) and [Wang et al. 2023](https://openreview.net/forum?id=B8EpSHEp9j)
+This package extends [Thijs Kuipers' gconv](https://github.com/ThijsKuipers1995/gconv) to add support for Approximate/Relaxed Group Equivariant kernels as described in [Wang et al. 2022](https://arxiv.org/abs/2201.11969) and [Wang et al. 2023](https://openreview.net/forum?id=B8EpSHEp9j)
 
 ## Installation
 
