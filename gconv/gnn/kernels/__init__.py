@@ -5,6 +5,7 @@ from .kernel import (
     GLiftingKernel,
     GSubgroupKernel,
     RGLiftingKernel,
+    RGSeparableKernel
 )
 from .kernel_sen import *
 from .kernel_en import *

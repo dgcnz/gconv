@@ -12,6 +12,7 @@ from typing import Callable, Optional
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+from gconv.utils import unsqueeze_like
 
 from torch import Tensor
 
@@ -276,7 +277,10 @@ class RGLiftingKernel(GroupKernel):
         )
         weight = torch.sum(
             self.relaxed_weights.view(
-                self.num_filter_banks, 1, self.relaxed_weights.shape[1], *product_dims,
+                self.num_filter_banks,
+                1,
+                self.relaxed_weights.shape[1],
+                *product_dims,
             )
             * weight,
             dim=0,
@@ -378,6 +382,135 @@ class GSeparableKernel(GroupKernel):
             )
             .transpose(0, 3)
             .transpose(1, 3)
+        )
+
+        # sample R3
+        weight = self.sample_Rn(
+            self.weight.repeat_interleave(num_out_H, dim=0),
+            H_product_Rn.repeat(self.out_channels, *product_dims),
+            **self.sample_Rn_kwargs,
+        ).view(
+            self.out_channels,
+            num_out_H,
+            1,
+            *self.kernel_size,
+        )
+
+        if self.mask is not None:
+            weight = self.mask * weight
+
+        if self.det_H is not None:
+            weight = weight / self.det_H(out_H).view(-1, 1, *self.weight_dims)
+
+        return weight_H, weight
+
+
+class RGSeparableKernel(GroupKernel):  # TODO: Implement this
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        num_filter_banks: int,
+        kernel_size: tuple,
+        group_kernel_size: tuple,
+        grid_H: Tensor,
+        grid_Rn: Tensor,
+        groups: int = 1,
+        mask: Tensor | None = None,
+        det_H: Callable | None = None,
+        inverse_H: Callable | None = None,
+        left_apply_to_H: Callable | None = None,
+        left_apply_to_Rn: Callable | None = None,
+        sample_H: Callable | None = None,
+        sample_Rn: Callable | None = None,
+        sample_H_kwargs: dict = {},
+        sample_Rn_kwargs: dict = {},
+    ) -> None:
+        """
+        The separable kernel manages the group and weights for
+        separable group convolutions, returning weights for
+        subgroup H and Rn separately.
+        """
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            group_kernel_size=group_kernel_size,
+            grid_H=grid_H,
+            grid_Rn=grid_Rn,
+            groups=groups,
+            mask=mask,
+            det_H=det_H,
+            inverse_H=inverse_H,
+            left_apply_to_H=left_apply_to_H,
+            left_apply_to_Rn=left_apply_to_Rn,
+            sample_H=sample_H,
+            sample_Rn=sample_Rn,
+            sample_H_kwargs=sample_H_kwargs,
+            sample_Rn_kwargs=sample_Rn_kwargs,
+        )
+
+        if len(group_kernel_size) != 1:
+            raise NotImplementedError(
+                "Relaxed Group Convolutions only support group kernels of size 1"
+            )
+        self.weight_H = nn.Parameter(
+            torch.empty(
+                num_filter_banks,
+                self._group_kernel_dim,
+                out_channels,
+                in_channels // groups,
+            )
+        )
+        self.num_filter_banks = num_filter_banks
+        self.rweight_H = nn.Parameter(
+            torch.ones(num_filter_banks, self._group_kernel_dim)
+        )
+
+        self.weight = nn.Parameter(torch.empty(out_channels, 1, *kernel_size))
+        self.weight_dims = (1,) * len(kernel_size)
+
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight_H, a=math.sqrt(5))
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+
+    def forward(self, in_H: Tensor, out_H: Tensor) -> tuple[Tensor, Tensor]:
+        num_in_H, num_out_H = in_H.shape[0], out_H.shape[0]
+        out_H_inverse = self.inverse_H(out_H)
+
+        H_product_H = self.left_apply_to_H(out_H_inverse, in_H)
+        H_product_Rn = self.left_apply_to_Rn(out_H_inverse, self.grid_Rn)
+
+        product_dims = (1,) * (H_product_Rn.ndim - 1)
+        # TODO: vectorize this for loop
+        weight_H = torch.stack(
+            [
+                self.sample_H(
+                    H_product_H.flatten(0, 1),
+                    self.weight_H[i].flatten(1, -1),
+                    self.grid_H,
+                    **self.sample_H_kwargs,
+                )
+                .view(
+                    num_in_H,
+                    num_out_H,
+                    self.in_channels // self.groups,
+                    self.out_channels,
+                    *self.weight_dims,
+                )
+                .transpose(0, 3)
+                .transpose(1, 3)
+                for i in range(self.num_filter_banks)
+            ],
+            dim=0,
+        )
+
+        # linear combination of filters
+        weight_H = torch.sum(
+            unsqueeze_like(self.rweight_H[:, None, :], weight_H) * weight_H,
+            dim=0,
         )
 
         # sample R3
