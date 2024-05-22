@@ -203,6 +203,11 @@ class GroupConvNd(nn.Module):
     def _conv3d_forward(
         self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None
     ):
+        print("NORMAL")
+        print(groups)
+        print(self.groups)
+        print(input.shape)
+        print(weight.shape)
         if self.padding_mode != "zeros":
             return F.conv3d(
                 F.pad(
@@ -217,18 +222,29 @@ class GroupConvNd(nn.Module):
             )
         if padding is None:
             padding = self.padding
+
+        
         return F.conv3d(
             input, weight, None, self.stride, padding, self.dilation, groups
         )
 
     def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None):
         """ Performs a transposed conv3d, commonly used to upsample. """
-
+        #print("TRANSPOSED")
+        #print(groups)
+        #print(self.groups)
+        #print(input.shape)
+        #print(weight.shape)
         if self.padding_mode != "zeros":
             raise ValueError("padding_mode must be zero for transposed conv")
         if padding is None:
             padding = self.padding
-        weight_new = weight.transpose(0, 1)
+        out_channels, in_channels, D, H , W = weight.shape
+        in_channels *= groups   #Switching these around
+        out_channels //= groups
+        weight_new = weight.reshape(in_channels,out_channels,D,H,W) #Transposed needs a different shape
+        #print(weight_new.shape)
+        
         return F.conv_transpose3d(
             input, weight_new, None, self.stride, padding,self.output_padding, groups, self.dilation,
         )
