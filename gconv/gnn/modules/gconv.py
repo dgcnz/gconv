@@ -6,26 +6,23 @@ Implements group convolution base modules.
 
 from __future__ import annotations
 
-from matplotlib import pyplot as plt
-
-from gconv.gnn.kernels import (
-    GroupKernel,
-    GLiftingKernel,
-    GSeparableKernel,
-    GSubgroupKernel,
-    GKernel,
-)
+import math
+from typing import Literal
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-
-import math
-
 from torch import Tensor
+from torch.nn.modules.utils import _pair, _reverse_repeat_tuple, _triple
 
-from torch.nn.modules.utils import _reverse_repeat_tuple, _pair, _triple
+from gconv.gnn.kernels import (
+    GKernel,
+    GLiftingKernel,
+    GroupKernel,
+    GSeparableKernel,
+    GSubgroupKernel,
+)
 
 __all__ = [
     "GConvLifting2d",
@@ -52,10 +49,24 @@ class GroupConvNd(nn.Module):
         padding: tuple | str = 0,
         dilation: int = 1,
         padding_mode: str = "zeros",  # NOTE: I like it this way
-        conv_mode: str = "3d",
+        conv_mode: Literal["2d", "3d", "3d_transposed"] = "3d",
         bias: bool = False,
-        output_padding = 0 # ADDED FOR UPCONV
+        output_padding: int = 0 , 
     ) -> None:
+        """
+        :param in_channels: int denoting the number of input channels.
+        :param out_channels: int denoting the number of output channels.
+        :param kernel_size: tuple denoting the spatial kernel size.
+        :param group_kernel_size: int or tuple denoting the group kernel size.
+        :param kernel: GroupKernel that manages the group and samples weights.
+        :param groups: int denoting the number of groups for depth-wise separability.
+        :param stride: int denoting the stride.
+        :param padding: int or denoting padding.
+        :param dilation: int denoting dilation.
+        :param padding_mode: str denoting the padding mode.
+        :param bias: bool that if true will initialzie bias parameters.
+        :param output_padding: output padding for the transposed convolution.
+        """
         super().__init__()
         if isinstance(group_kernel_size, tuple) and (
             any(i < 0 for i in group_kernel_size) or sum(group_kernel_size) <= 0
@@ -100,7 +111,7 @@ class GroupConvNd(nn.Module):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
-        self.output_padding = output_padding #ADDED FOR UPCONV
+        self.output_padding = output_padding
 
         self.padding_mode = padding_mode
 
@@ -114,10 +125,11 @@ class GroupConvNd(nn.Module):
             self.padding = (
                 _triple(padding) if isinstance(self.padding, int) else padding
             )
-        #ADDED FOR UPCONV
-        elif conv_mode == "3d_transposed": 
+        elif conv_mode == "3d_transposed":
             if self.padding_mode != "zeros":
-                raise ValueError("padding_mode must be zeros for transposed convolution")
+                raise ValueError(
+                    "padding_mode must be zeros for transposed convolution"
+                )
             self._conv_forward = self._conv3d_transposed_forward
             bias_shape = (1, 1, 1, 1)
             self.padding = (
@@ -126,7 +138,7 @@ class GroupConvNd(nn.Module):
 
         else:
             raise ValueError(
-                f"Unspported conv mode: got {conv_mode=}, expected `2d`, `3d` or 3d_transposed." #ADDED FOR UPCONV
+                f"Unspported conv mode: got {conv_mode=}, expected `2d`, `3d` or 3d_transposed."
             )
 
         # init padding settings
@@ -208,25 +220,22 @@ class GroupConvNd(nn.Module):
         return F.conv3d(
             input, weight, None, self.stride, padding, self.dilation, groups
         )
-    
-    #ADDED FOR UPCONV
+
     def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int):
-        #Performs a transposed conv3d, commonly used to upsample
+        """ Performs a transposed conv3d, commonly used to upsample. """
 
         if self.padding_mode != "zeros":
             raise ValueError("padding_mode must be zero for transposed conv")
-        weight_new = weight.transpose(0,1)
+        weight_new = weight.transpose(0, 1)
         return F.conv_transpose3d(
-            F.pad(
-                input, self._reversed_padding_repeated_twice, mode=self.padding_mode
-            ),
+            F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
             weight_new,
             None,
-            self.stride,        #Stride or dilation needs to be higher than output padding
+            self.stride,  # Stride or dilation needs to be higher than output padding
             _triple(0),
             self.dilation,
             groups,
-            self.output_padding           #output padding should be one to go from 16^3 to 32^3 to 64^3
+            self.output_padding,  # output padding should be one to go from 16^3 to 32^3 to 64^3
         )
 
     def extra_repr(self):
@@ -336,7 +345,9 @@ class GSeparableConvNd(GroupConvNd):
         num_in_H, num_out_H = in_H.shape[0], out_H.shape[0]
 
         weight_H, weight = self.kernel(in_H, out_H)
-        assert weight_H.shape[4:] == len(self.kernel_size) * (1, ), f"Pointwise kernel must have size 1. vs {weight_H.shape[4:]}"
+        assert weight_H.shape[4:] == len(self.kernel_size) * (
+            1,
+        ), f"Pointwise kernel must have size 1. vs {weight_H.shape[4:]}"
         # subgroup conv
         input = self._conv_forward(
             input.reshape(N, self.in_channels * num_in_H, *input_dims),
@@ -647,29 +658,30 @@ class GSeparableConv3d(GSeparableConvNd):
         dilation: int = 1,
         padding_mode: str = "zeros",
         bias: bool = False,
-        conv_mode = '3d',   #ADDED FOR UPCONV
-        output_padding = 0, #ADDED FOR UPCONV
+        conv_mode: Literal["2d", "3d", "3d_transposed"] = "3d",
+        output_padding: int=0,
     ) -> None:
         """
         Implements 3d separable group convolution.
 
-        Arguments:
-            - int_channels: int denoting the number of input channels.
-            - out_channels: int denoting the number of output channels.
-            - kernel_size: tuple denoting the spatial kernel size.
-            - group_kernel_size: int or tuple denoting the group kernel size.
-                                    In the case of a tuple, each element denotes
-                                    a separate kernel size for each subgroup. For
-                                    example, (4, 2) could denote a O3 kernel with
-                                    rotation and reflection kernels of size 4 and
-                                    2, respectively.
-            - kernel: GroupKernel that manages the group and samples weights.
-            - groups: int denoting the number of groups for depth-wise separability.
-            - stride: int denoting the stride.
-            - padding: int or denoting padding.
-            - dilation: int denoting dilation.
-            - padding_mode: str denoting the padding mode.
-            - bias: bool that if true will initialzie bias parameters.
+        :param int_channels: int denoting the number of input channels.
+        :param out_channels: int denoting the number of output channels.
+        :param kernel_size: tuple denoting the spatial kernel size.
+        :param group_kernel_size: int or tuple denoting the group kernel size.
+                              In the case of a tuple, each element denotes
+                              a separate kernel size for each subgroup. For
+                              example, (4, 2) could denote a O3 kernel with
+                              rotation and reflection kernels of size 4 and
+                              2, respectively.
+        :param kernel: GroupKernel that manages the group and samples weights.
+        :param groups: int denoting the number of groups for depth-wise separability.
+        :param stride: int denoting the stride.
+        :param padding: int or denoting padding.
+        :param dilation: int denoting dilation.
+        :param padding_mode: str denoting the padding mode.
+        :param bias: bool that if true will initialzie bias parameters.
+        :param conv_mode: str denoting the convolution mode. Supports 2d, 3d and 3d_transposed.
+        :param output_padding: output padding for the transposed convolution.
         """
         super().__init__(
             in_channels,
@@ -683,8 +695,8 @@ class GSeparableConv3d(GSeparableConvNd):
             _triple(dilation),
             padding_mode,
             bias=bias,
-            conv_mode=conv_mode, #ADDED FOR UPCONV            
-            output_padding=output_padding  #ADDED FOR UPCONV
+            conv_mode=conv_mode,
+            output_padding=output_padding,
         )
 
 
