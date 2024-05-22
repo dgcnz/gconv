@@ -230,7 +230,7 @@ class GroupConvNd(nn.Module):
             padding = self.padding
         weight_new = weight.transpose(0, 1)
         return F.conv_transpose3d(
-            input, weight, None, self.stride, padding,self.output_padding, groups, self.dilation,
+            input, weight_new, None, self.stride, padding,self.output_padding, groups, self.dilation,
         )
         
 
