@@ -317,8 +317,9 @@ class GSeparableConvNd(GroupConvNd):
         padding: tuple | str = 0,
         dilation: int = 1,
         padding_mode: str = "zeros",
-        conv_mode: str = "3d",
+        conv_mode: str = "3d",        
         bias: bool = False,
+        output_padding: int = 0,
     ) -> None:
         """
         Implementation the Nd separable group convolution.
@@ -336,6 +337,7 @@ class GSeparableConvNd(GroupConvNd):
             padding_mode,
             conv_mode,
             bias,
+            output_padding=output_padding
         )
 
     def forward(
