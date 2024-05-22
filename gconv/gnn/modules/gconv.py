@@ -221,22 +221,18 @@ class GroupConvNd(nn.Module):
             input, weight, None, self.stride, padding, self.dilation, groups
         )
 
-    def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int):
+    def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None):
         """ Performs a transposed conv3d, commonly used to upsample. """
 
         if self.padding_mode != "zeros":
             raise ValueError("padding_mode must be zero for transposed conv")
+        if padding is None:
+            padding = self.padding
         weight_new = weight.transpose(0, 1)
-        return F.conv_transpose3d(
-            F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
-            weight_new,
-            None,
-            self.stride,  # Stride or dilation needs to be higher than output padding
-            _triple(0),
-            self.dilation,
-            groups,
-            self.output_padding,  # output padding should be one to go from 16^3 to 32^3 to 64^3
+        return F.conv3d(
+            input, weight, None, self.stride, padding, self.dilation, groups,self.output_padding
         )
+        
 
     def extra_repr(self):
         s = f"{self.in_channels}, {self.out_channels}, kernel_size={self.kernel_size}, group_kernel_size={self.group_kernel_size}, stride={self.stride}"
