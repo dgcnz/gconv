@@ -350,6 +350,7 @@ class GSeparableConvNd(GroupConvNd):
             bias,
             output_padding=output_padding
         )
+        self.conv_mode = conv_mode
 
     def forward(
         self, input: Tensor, in_H: Tensor, out_H: Tensor
@@ -362,18 +363,30 @@ class GSeparableConvNd(GroupConvNd):
             1,
         ), f"Pointwise kernel must have size 1. vs {weight_H.shape[4:]}"
         # subgroup conv
-        input = self._conv_forward(
-            input.reshape(N, self.in_channels * num_in_H, *input_dims),
-            weight_H.reshape(
-                self.out_channels * num_out_H,
-                (self.in_channels // self.groups) * num_in_H,
-                *weight_H.shape[4:],
-            ),
-            self.groups,
-            padding=0,  # no padding for pointwise conv
-            output_padding=0,
-            stride=1
-        )
+        if self.conv_mode == '3d_transposed':
+            input = self._conv_forward(
+                input.reshape(N, self.in_channels * num_in_H, *input_dims),
+                weight_H.reshape(
+                    self.out_channels * num_out_H,
+                    (self.in_channels // self.groups) * num_in_H,
+                    *weight_H.shape[4:],
+                ),
+                self.groups,
+                padding=0,  # no padding for pointwise conv
+                output_padding=0,
+                stride=1
+            )
+        else:
+            input = self._conv_forward(
+                input.reshape(N, self.in_channels * num_in_H, *input_dims),
+                weight_H.reshape(
+                    self.out_channels * num_out_H,
+                    (self.in_channels // self.groups) * num_in_H,
+                    *weight_H.shape[4:],
+                ),
+                self.groups,
+                padding=0,  # no padding for pointwise conv                
+            )  
 
         # spatial conv
         input = self._conv_forward(
