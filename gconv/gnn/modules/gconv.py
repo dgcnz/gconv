@@ -180,7 +180,7 @@ class GroupConvNd(nn.Module):
             init.uniform_(self.bias, -bound, bound)
 
     def _conv2d_forward(
-        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None
+        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None, **kwargs
     ):
         if self.padding_mode != "zeros":
             return F.conv2d(
@@ -201,7 +201,7 @@ class GroupConvNd(nn.Module):
         )
 
     def _conv3d_forward(
-        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None
+        self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None, **kwargs
     ):
         
         if self.padding_mode != "zeros":
@@ -224,13 +224,20 @@ class GroupConvNd(nn.Module):
             input, weight, None, self.stride, padding, self.dilation, groups
         )
 
-    def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None):
+    def _conv3d_transposed_forward(self, input: Tensor, weight: Tensor, groups: int, padding: int | None = None, **kwargs):
         """ Performs a transposed conv3d, commonly used to upsample. """
         
         if self.padding_mode != "zeros":
-            raise ValueError("padding_mode must be zero for transposed conv")
+            raise ValueError("padding_mode must be zeros for transposed conv")
         if padding is None:
             padding = self.padding
+        output_padding = self.output_padding
+        stride = self.stride
+        #An option for custom output padding and stride, needed when only doing rotations
+        if 'output_padding' in kwargs:
+            output_padding = kwargs['output_padding']
+        if 'stride' in kwargs:
+            stride = kwargs['stride']
         out_channels, in_channels, D, H , W = weight.shape
         in_channels *= groups   #Switching these around
         out_channels //= groups
@@ -238,7 +245,7 @@ class GroupConvNd(nn.Module):
         
         
         return F.conv_transpose3d(
-            input, weight_new, None, self.stride, padding,self.output_padding, groups, self.dilation,
+            input, weight_new, None, stride, padding,output_padding, groups, self.dilation,
         )
         
 
@@ -364,6 +371,8 @@ class GSeparableConvNd(GroupConvNd):
             ),
             self.groups,
             padding=0,  # no padding for pointwise conv
+            output_padding=0,
+            stride=1
         )
 
         # spatial conv
