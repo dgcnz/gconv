@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "gconv-tpk"
-version = "0.0.3"
+version = "0.0.4"
 description = "Pytorch extension for continuous regular group convolutions"
 authors = ["Thijs Kuipers <kuipersthijs@gmail.com>"]
 readme = "README.md"
